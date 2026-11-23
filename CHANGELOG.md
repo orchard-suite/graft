@@ -1,5 +1,15 @@
 # Changelog
 
+## [7.0.0](https://github.com/orchard-suite/graft/compare/v6.6.1...v7.0.0) (2026-11-23)
+
+### ⚠ BREAKING CHANGES
+
+* **graft:** open the source in orchard ([2c64299](https://github.com/orchard-suite/graft/commit/2c64299d2a704e2ddd3064d0370232870d13ff2c))
+
+### Features
+
+* **graft:** open the source in orchard ([2c64299](https://github.com/orchard-suite/graft/commit/2c64299d2a704e2ddd3064d0370232870d13ff2c))
+
 ## [6.6.1](https://github.com/orchard-suite/graft/compare/v6.6.0...v6.6.1) (2026-11-22)
 
 ### Bug Fixes
