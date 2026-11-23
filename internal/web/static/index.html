@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graft</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Graft</h1>
+      <p class="tagline">Report a problem or ask for a change. Graft looks into it, and answers.</p>
+      <p id="who" class="note"></p>
+    </header>
+
+    <form id="ask-form" hidden>
+      <div class="row picks">
+        <select id="repo" aria-label="Repository"></select>
+        <select id="lane" aria-label="Lane"></select>
+      </div>
+      <textarea id="text" rows="5" placeholder="What happened, what you expected, and where. Or what you would like changed." required minlength="10"></textarea>
+      <label class="files note">Pictures of the page or PDFs, up to 5 (10 MB each, 25 MB together)
+        <input id="files" type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf">
+      </label>
+      <div class="row">
+        <span id="form-note" class="note"></span>
+        <button type="submit" id="go">Send</button>
+      </div>
+    </form>
+    <p id="no-lanes" class="note" hidden>You hold no lane on any repository of this program, so there is nothing to ask here.</p>
+
+    <section id="repos" aria-label="Repositories"></section>
+    <section id="requests" aria-live="polite"></section>
+  </main>
+
+  <template id="repo-row">
+    <div class="repo-row">
+      <span class="path"></span>
+      <span class="stopped note"></span>
+      <button class="switch" type="button"></button>
+    </div>
+  </template>
+
+  <template id="request-card">
+    <article class="request">
+      <div class="head">
+        <h2 class="title"></h2>
+        <span class="state"></span>
+      </div>
+      <p class="meta note"></p>
+      <p class="text"></p>
+      <p class="answer"></p>
+      <p class="plan note" hidden></p>
+      <ul class="files" hidden></ul>
+      <div class="links">
+        <a class="ticket" target="_blank" rel="noopener">ticket</a>
+        <a class="incident" target="_blank" rel="noopener">incident</a>
+        <button class="more" type="button">Details</button>
+      </div>
+      <div class="detail" hidden></div>
+    </article>
+  </template>
+
+  <script src="/app.js"></script>
+</body>
+</html>

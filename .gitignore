@@ -1,0 +1,24 @@
+# Agent instruction link; AGENTS.md is the file.
+CLAUDE.md
+.workbench/
+.claude/
+
+# Build output
+/bin/
+/dist/
+/graft
+*.test
+coverage.out
+
+# Local data
+/data/
+/work/
+/repos/
+.env
+*.local
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

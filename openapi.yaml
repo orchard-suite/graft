@@ -1,0 +1,781 @@
+openapi: 3.1.0
+info:
+  title: Graft requests API
+  version: "2"
+  description: |
+    A request is one thing a person asked for: a problem they reported or a
+    change they want. Graft works it from the words they sent to the
+    answer they get.
+
+    Three ports serve this API, each with its own routes and its own
+    credential. None reads another's.
+
+    - The page's port serves `/api/...` to a person the front door signed
+      in. A change there must come from Graft's own page (`Origin`).
+    - The token port serves `/v1/...` to an intake app, which presents its
+      own bearer token. The app's server says who is signed in to it; a
+      browser never does.
+    - The forge's port serves `/hooks/...` to the forge, which presents the
+      secret its webhook was set up with, to say a ticket was commented on.
+
+    A plan is approved, declined, or sent back in the catalog hub, never
+    here. A request says where (`plan.url`) and how it was decided. Its
+    approvers may also answer it by commenting on its ticket, and Graft
+    plans the next round from what they said.
+
+    internal/web/openapi_test.go fails while this file and the routes in
+    internal/web/server.go differ.
+servers:
+  - url: /
+tags:
+  - name: page
+    description: For a person, on the page's port.
+  - name: intake
+    description: For an intake app, on the token port.
+  - name: forge
+    description: For the forge's webhook, on the forge's port.
+
+paths:
+  /api/me:
+    get:
+      operationId: getMe
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Say who is signed in and the lanes they hold
+      responses:
+        "200":
+          description: The person, the program, each repository they hold a lane on, and the repositories whose every request they read. A lane is the program's, so it is every repository or none.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "401": { $ref: "#/components/responses/Error" }
+  /api/requests:
+    get:
+      operationId: listRequests
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: List the person's requests
+      description: |
+        Their own requests, and every request in a repository they read
+        whole: where they hold a lane above the lowest, or where the
+        repository's approvers (else the program's) let them in. Newest
+        first, at most 200.
+      responses:
+        "200":
+          description: The requests.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Request" }
+        "401": { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createRequest
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Ask for something
+      description: |
+        The request enters the highest lane the person holds in the program,
+        unless `lane` names another they hold: a lane's members, in the
+        program file, hold it, and everyone else holds the fallback lane. A
+        lane they do not hold is refused with 403. No approval moves it to
+        another lane later.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PageRequestBody" }
+          multipart/form-data:
+            schema:
+              type: object
+              required: [request]
+              description: The same request with files. See `intakeRequest` for the files' rules.
+              properties:
+                request: { $ref: "#/components/schemas/PageRequestBody" }
+                attachments: { $ref: "#/components/schemas/AttachmentParts" }
+            encoding:
+              request: { contentType: application/json }
+              attachments: { contentType: "image/png, image/jpeg, image/gif, image/webp, application/pdf" }
+      responses:
+        "201":
+          description: The request, received.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /api/requests/{id}:
+    get:
+      operationId: getRequest
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Read one request
+      description: |
+        The person who asked sees what they sent, where it stands, and the
+        answer. Someone who helps run the repository (a lane above the
+        lowest), or who decides its plans (the repository's approvers, else
+        the program's, as the hub judges them), also gets `detail`: the
+        verdict, the plan, and everything else the desk kept. Anyone else
+        gets 404, as for a request that does not exist.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200":
+          description: The request.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RequestDetail" }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/requests/{id}/attachments/{attachmentId}:
+    get:
+      operationId: getRequestAttachment
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Read one file sent with a request
+      description: |
+        For whoever may read the request: the person who asked, someone who
+        helps run the repository, and someone who decides its plans. Anyone
+        else gets 404. The file is answered as the kind its own bytes say it
+        is, shown in place. Gone after the program's `context_days`.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/attachmentId" }
+      responses:
+        "200": { $ref: "#/components/responses/Attachment" }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/requests/{id}/events:
+    get:
+      operationId: listRequestEvents
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Read a request's steps
+      description: |
+        Only for someone who helps run the repository or decides its plans.
+        A notice the program held is a step whose message starts
+        `notice held: `.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200":
+          description: The steps, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Event" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/requests/{id}/evidence:
+    get:
+      operationId: listRequestEvidence
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Read a request's numbered evidence
+      description: |
+        What the investigation read: each tool answer and each code
+        reference, by the number the verdict cites. Only for someone who
+        helps run the repository or decides its plans.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200":
+          description: The evidence, by number.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Evidence" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/requests/{id}/log:
+    get:
+      operationId: getRequestLog
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Read a request's log
+      description: Every command and every agent's output. Only for someone who helps run the repository or decides its plans.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200":
+          description: The log as text.
+          content:
+            text/plain:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/requests/{id}/retry:
+    post:
+      operationId: retryRequest
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Try the stage of a request that failed again
+      description: |
+        Runs again the stage that failed, on the same request: no new
+        request, ticket, or approval. A round of the plan that failed while
+        the round before waits for its decision is written again from the
+        approvers' notes. Only for one of the request's approvers (the
+        repository's, else the program's), as the hub judges them now, and
+        never the person who asked. The same as commenting `/graft retry`
+        on the request's ticket.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200":
+          description: The request, back at the stage that failed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RequestDetail" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /api/repositories/stop:
+    post:
+      operationId: stopRepository
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Stop Graft shipping to a repository
+      description: |
+        Flips the repository's stop switch. Nothing is built or landed there
+        until it is started again; reading and answering go on. Only for
+        someone who holds a lane above the lowest there.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Switch" }
+      responses:
+        "200":
+          description: Stopped.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Switched" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /api/repositories/start:
+    post:
+      operationId: startRepository
+      tags: [page]
+      security: [{ frontDoor: [] }]
+      summary: Let Graft ship to a repository again
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Switch" }
+      responses:
+        "200":
+          description: Started.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Switched" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /v1/requests:
+    post:
+      operationId: intakeRequest
+      tags: [intake]
+      security: [{ appToken: [] }]
+      summary: Report a problem or ask for a change, for a signed-in person
+      description: |
+        The token names the app. The program file says which repository and
+        environment that app reports against; an app listed for more than
+        one repository names it. `person` is whoever is signed in to the
+        app, as the app's own server knows them.
+
+        The request enters the highest lane the person holds in the
+        program: a lane's members, in the program file, hold it, and anyone
+        else the app vouches for holds the fallback lane. What the person
+        may see in the catalog hub plays no part. A request from the app is
+        never refused for want of a lane: a `lane` they do not hold gives
+        way to the one chosen for them.
+
+        `context` takes fixed fields only. The page address is kept without
+        its query or fragment, and the console lines are cut to size, so no
+        form value rides along. Graft drops the context after the
+        program's `context_days`.
+
+        A message that holds what looks like a secret is quarantined: nobody
+        and nothing reads it, and the person is told to rotate the secret.
+
+        Files go with the request as `multipart/form-data`: the part
+        `request` is exactly the JSON body, and each part `attachments` is
+        one file. At most 5 files, each at most 10 MiB, 25 MiB together.
+        A file is taken only when its own bytes say it is a PNG, JPEG, GIF,
+        or WebP picture, or a PDF; what the part's header calls it does not
+        count. Anything else is refused with 400 and a reason the app may
+        show the person as it is. Every file is read for text (a PDF's own
+        text, and every picture and PDF page by OCR) and swept for secrets
+        before any agent sees it: a hit quarantines the request and deletes
+        its files. Graft drops the files with the context, after the
+        program's `context_days`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IntakeRequestBody" }
+          multipart/form-data:
+            schema:
+              type: object
+              required: [request]
+              properties:
+                request: { $ref: "#/components/schemas/IntakeRequestBody" }
+                attachments: { $ref: "#/components/schemas/AttachmentParts" }
+            encoding:
+              request: { contentType: application/json }
+              attachments: { contentType: "image/png, image/jpeg, image/gif, image/webp, application/pdf" }
+      responses:
+        "201":
+          description: The request, received.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+    get:
+      operationId: intakeListRequests
+      tags: [intake]
+      security: [{ appToken: [] }]
+      summary: List what a person sent through this app
+      parameters: [{ $ref: "#/components/parameters/person" }]
+      responses:
+        "200":
+          description: Their requests from this app, newest first, at most 100.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Request" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/requests/{id}:
+    get:
+      operationId: intakeGetRequest
+      tags: [intake]
+      security: [{ appToken: [] }]
+      summary: Read one request a person sent through this app
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/person" }
+      responses:
+        "200":
+          description: The request.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/requests/{id}/attachments/{attachmentId}:
+    get:
+      operationId: intakeGetRequestAttachment
+      tags: [intake]
+      security: [{ appToken: [] }]
+      summary: Read one file a person sent through this app
+      description: |
+        Only to the app that sent the request, for the person it was sent
+        for; anything else is 404, as for the request itself. Gone after
+        the program's `context_days`.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/attachmentId" }
+        - { $ref: "#/components/parameters/person" }
+      responses:
+        "200": { $ref: "#/components/responses/Attachment" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /hooks/gitlab:
+    post:
+      operationId: gitlabHook
+      tags: [forge]
+      security: [{ forgeHook: [] }]
+      summary: Hear that someone commented on an issue
+      description: |
+        GitLab's webhook for comments (its note events). A comment on an
+        issue that is a request's ticket has Graft read that ticket's
+        comments again, from the forge with its own credential: the
+        webhook's body only names the issue, and nothing else in it is
+        read. A comment counts only from one of the plan's approvers, while
+        the plan waits for a decision. Anything else is answered `heard:
+        false` and left alone, so the forge never turns the webhook off.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                object_kind: { type: string, description: "`note` for a comment." }
+                project:
+                  type: object
+                  properties:
+                    path_with_namespace: { type: string, description: The repository, as the program file names it. }
+                object_attributes:
+                  type: object
+                  properties:
+                    noteable_type: { type: string, description: "`Issue` for a comment on an issue." }
+                issue:
+                  type: object
+                  properties:
+                    iid: { type: integer, description: The issue's number in its project. }
+      responses:
+        "200":
+          description: Not a comment on a request's ticket; nothing was done.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Heard" }
+        "202":
+          description: A comment on a request's ticket; its comments are read again.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Heard" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "503": { $ref: "#/components/responses/Error" }
+
+components:
+  securitySchemes:
+    frontDoor:
+      type: apiKey
+      in: header
+      name: X-Forwarded-Email
+      description: Set by the front door for a signed-in person. Only the front door reaches the page's port.
+    appToken:
+      type: http
+      scheme: bearer
+      description: An intake app's own token, from the token directory.
+    forgeHook:
+      type: apiKey
+      in: header
+      name: X-Gitlab-Token
+      description: The secret the forge's webhook was set up with, read from `GRAFT_HOOK_SECRET_FILE`.
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    attachmentId:
+      name: attachmentId
+      in: path
+      required: true
+      description: A file's id, from the request's `attachments`.
+      schema: { type: string }
+    person:
+      name: person
+      in: query
+      required: true
+      description: The sign-in address of whoever is signed in to the app.
+      schema: { type: string }
+  responses:
+    Attachment:
+      description: |
+        The file, as the kind its own bytes say it is, with
+        `Content-Disposition` inline and its name, `X-Content-Type-Options:
+        nosniff`, and a `Content-Security-Policy` under which nothing runs
+        and nothing loads but the file. Bytes that are no picture or PDF
+        are answered as `application/octet-stream`, to download.
+      content:
+        image/png: { schema: { type: string, format: binary } }
+        image/jpeg: { schema: { type: string, format: binary } }
+        image/gif: { schema: { type: string, format: binary } }
+        image/webp: { schema: { type: string, format: binary } }
+        application/pdf: { schema: { type: string, format: binary } }
+        application/octet-stream: { schema: { type: string, format: binary } }
+    Error:
+      description: Why not.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    Me:
+      type: object
+      required: [email, version, program, repositories, reads]
+      properties:
+        email: { type: string }
+        version: { type: string }
+        program: { type: string }
+        reads:
+          type: array
+          items: { type: string }
+          description: The repositories whose every request they read whole, as they run it or decide its plans.
+        repositories:
+          type: array
+          items:
+            type: object
+            required: [path, lanes, lane, staff, stopped]
+            properties:
+              path: { type: string }
+              lanes: { type: array, items: { type: string }, description: The lanes the person holds in the program, lowest first. }
+              lane: { type: string, description: The lane a request of theirs enters when it names none. }
+              staff: { type: boolean, description: They hold a lane above the lowest, so they see every request there and may stop and start it. }
+              stopped: { type: boolean }
+              reason: { type: string }
+    PageRequestBody:
+      type: object
+      required: [repository, text]
+      properties:
+        repository: { type: string, description: The repository's path on the forge. }
+        lane: { type: string, description: A lane the person holds. Left out, the highest. }
+        text: { type: string, minLength: 10, maxLength: 16000 }
+    IntakeRequestBody:
+      type: object
+      required: [person, text]
+      properties:
+        person: { type: string, description: The signed-in person's sign-in address. }
+        text: { type: string, minLength: 10, maxLength: 16000 }
+        repository: { type: string, description: Needed only when the app reports against more than one. }
+        lane: { type: string, description: A lane the person holds. Left out, or one they do not hold, the highest they hold. }
+        context: { $ref: "#/components/schemas/Context" }
+    AttachmentParts:
+      type: array
+      maxItems: 5
+      description: Each file as its own `attachments` part, named by its file name. At most 10 MiB each, 25 MiB together.
+      items: { type: string, format: binary }
+    Attachment:
+      type: object
+      required: [id, name, contentType, size]
+      properties:
+        id: { type: string }
+        name: { type: string, description: The name it was sent with, without a folder. }
+        contentType: { type: string, enum: [image/png, image/jpeg, image/gif, image/webp, application/pdf], description: The kind its own bytes say it is. }
+        size: { type: integer, description: Bytes. }
+        from: { type: string, enum: [person, approver], description: "Who sent it: the person who asked, or one of the plan's approvers on its ticket. Absent on a file kept before it was said, which is the person's." }
+        by: { type: string, description: The approver who sent it. Present only when `from` is `approver`. }
+        round: { type: integer, description: The round of the plan the approver answered with it. Present only when `from` is `approver`. }
+    Context:
+      type: object
+      description: Where the person was. Fixed fields only.
+      properties:
+        url: { type: string, description: The page. Kept without its query or fragment. }
+        version: { type: string, description: The app version the person was on. The investigator reads the code at its tag. }
+        user_agent: { type: string }
+        console:
+          type: array
+          maxItems: 50
+          items: { type: string, maxLength: 500 }
+    Request:
+      type: object
+      required: [id, createdAt, updatedAt, state, ended, repo, app, lane, text, attachments]
+      properties:
+        id: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        state:
+          type: string
+          enum: [received, screening, checking, investigating, planning, building, landing, watching, holding, awaiting_plan, awaiting_review, stalled, answered, filed, waiting, released, declined, quarantined, failed]
+          description: |
+            Where the request stands. `stalled`: a stage failed, and it waits
+            for one of its approvers to try that stage again. Nothing it held
+            is lost.
+        ended: { type: boolean, description: The request has stopped. }
+        repo: { type: string }
+        app: { type: string, description: "The intake app, or `graft` for the page." }
+        lane: { type: string }
+        title: { type: string }
+        text: { type: string, description: What the person sent. Redacted when it held a secret. }
+        answer: { type: string, description: The one message the person gets. }
+        ticket:
+          type: object
+          properties:
+            number: { type: integer }
+            url: { type: string }
+        incident:
+          type: object
+          properties:
+            id: { type: string }
+            url: { type: string }
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              kind: { type: string, enum: [request, incident] }
+              id: { type: string }
+              url: { type: string }
+        attachments:
+          type: array
+          description: The files sent with the request, and those its plan's approvers sent on its ticket once Graft swept them for secrets, while it keeps them. Empty once they are dropped, or when it held a secret.
+          items: { $ref: "#/components/schemas/Attachment" }
+        plan:
+          type: object
+          description: |
+            Where the request's plan is read and decided, in the catalog
+            hub, and how the last one was. Present once a plan was asked
+            about. Only the program's approvers decide a plan, never the
+            person who asked: Graft takes no one else's decision of it.
+          required: [round]
+          properties:
+            round: { type: integer, description: The plan round, from 1. }
+            url: { type: string, description: The plan's run in the hub, where it is approved, declined, or sent back. }
+            decision: { type: string, enum: [approved, declined, returned] }
+            decidedBy: { type: string, description: Who decided it, as the hub signed them in. }
+            decidedAt: { type: string, format: date-time }
+            note: { type: string, description: What they wrote with the decision. }
+    RequestDetail:
+      allOf:
+        - $ref: "#/components/schemas/Request"
+        - type: object
+          required: [staff, mayRetry]
+          properties:
+            staff: { type: boolean, description: The reader sees the whole request, as they run its repository or decide its plans. }
+            retry:
+              $ref: "#/components/schemas/Stall"
+            mayRetry: { type: boolean, description: "The reader may try the stage that failed again: one of the request's approvers, and not the person who asked." }
+            detail:
+              type: object
+              description: |
+                Everything the desk kept; for whole readers only. The
+                verdict; the plan, as its brief for the approvers
+                (`plan.brief`) and its build plan for the builder
+                (`plan.build`); the plans of its earlier rounds (`earlier`);
+                what its approvers said of it, in the hub or on the ticket,
+                and the round that answered each (`thread`); the plan's run
+                in the hub; the pull request; what was built; a build that is
+                not finished and what is left of it (`unfinished`), the
+                proofs its approvers waived (`waived`), and the release commit
+                being watched (`release`); and its runs (`runs`, each a
+                `RunLink`), each with its comment on the ticket.
+              additionalProperties: true
+            spend:
+              $ref: "#/components/schemas/Spend"
+    Spend:
+      type: object
+      description: |
+        What a request's agents spent, as the agent runtime reported each
+        run; for whole readers only, never the person who asked. Graft
+        estimates nothing: a run the runtime reported nothing of counts in
+        `runs` and `unknown`, and adds no dollars.
+      required: [totalUsd, runs]
+      properties:
+        totalUsd: { type: number, description: Every agent run's spend, in US dollars. }
+        runs: { type: integer, description: Every agent run, one a prompt Graft sent an agent. }
+        unknown: { type: integer, description: The runs whose spend the runtime did not report. }
+        parts:
+          type: array
+          description: Each stage of each round, in the order they first ran.
+          items:
+            type: object
+            required: [stage, round, usd, runs, turns]
+            properties:
+              stage: { type: string, enum: [screen, investigate, revise, build, prove] }
+              round: { type: integer, description: "The plan round; 0 for the screen and for a build nobody was asked about." }
+              usd: { type: number }
+              runs: { type: integer }
+              turns: { type: integer }
+              inputTokens: { type: integer }
+              outputTokens: { type: integer }
+              cacheReadTokens: { type: integer }
+              cacheCreationTokens: { type: integer }
+              durationMs: { type: integer }
+        agentRuns:
+          type: array
+          description: Every agent run, oldest first.
+          items:
+            $ref: "#/components/schemas/AgentRun"
+    AgentRun:
+      type: object
+      description: One prompt Graft sent an agent runtime, and what the runtime said it consumed.
+      required: [id, stage, round, cost, costUsd, durationMs, outcome, at]
+      properties:
+        id: { type: integer }
+        stage: { type: string, enum: [screen, investigate, revise, build, prove], description: "`prove` is the prover of a finished build." }
+        round: { type: integer }
+        run: { type: integer, description: The request's run on the ticket it belongs to; left out for the screen. }
+        attempt: { type: integer, description: That run's attempt. }
+        try: { type: integer, description: "Its prompt within that run: the investigator's try, the builder's round." }
+        windDown: { type: boolean, description: The prompt that asks a run at its budget to write what it has. }
+        session: { type: string, description: The agent session it ran in. }
+        model: { type: string }
+        cost:
+          type: string
+          enum: [reported, stopped, unknown]
+          description: |
+            Where `costUsd` came from: the runtime's report as it closed the
+            run; the runtime's words when it stopped the run at its budget,
+            which name the dollars alone; or nothing (`unknown`, counted as
+            0).
+        costUsd: { type: number }
+        inputTokens: { type: integer }
+        outputTokens: { type: integer }
+        cacheReadTokens: { type: integer }
+        cacheCreationTokens: { type: integer }
+        turns: { type: integer }
+        durationMs: { type: integer }
+        outcome: { type: string, enum: [done, capped, timeout, failed] }
+        at: { type: string, format: date-time }
+    Stall:
+      type: object
+      description: |
+        A stage that failed and waits to be tried again; for whole readers
+        only. While a round of the plan still waits for its decision, the
+        stage is the next round, and the request waits on the round before.
+      required: [stage, round, cause, at, tries]
+      properties:
+        stage: { type: string, enum: [investigating, planning, building, landing, watching], description: The stage a retry runs again. }
+        round: { type: integer, description: The plan round the request stood at. }
+        cause: { type: string, description: Why it stopped, in plain words. }
+        at: { type: string, format: date-time }
+        tries: { type: integer, description: The times the stage has failed. }
+    RunLink:
+      type: object
+      description: |
+        One run of a request, as `detail.runs` lists it: one pass of one
+        stage from its start. Its comment on the ticket, written as it goes
+        and edited in place, shows what it did, what proves each criterion
+        of the plan, its screenshots, and why it stopped if it did.
+      required: [n, kind, round, attempt]
+      properties:
+        n: { type: integer, description: The request's runs counted from 1. }
+        kind: { type: string, enum: [investigate, revise, build, land, release] }
+        round: { type: integer, description: "The plan round it writes, or builds on; 0 for a build nobody was asked about." }
+        attempt: { type: integer, description: Which attempt of this kind and round it is, from 1. }
+        outcome: { type: string, enum: [done, failed], description: How it ended; left out while it runs. }
+        url: { type: string, description: Its comment on the ticket; left out until the ticket exists. }
+    Heard:
+      type: object
+      required: [heard]
+      properties:
+        heard: { type: boolean, description: The comment was on a request's ticket. }
+    Event:
+      type: object
+      required: [at, stage, message]
+      properties:
+        at: { type: string, format: date-time }
+        stage: { type: string }
+        message: { type: string }
+    Evidence:
+      type: object
+      required: [n, kind, title, body, at]
+      properties:
+        n: { type: integer }
+        kind: { type: string, enum: [tool, code] }
+        title: { type: string }
+        body: { type: string }
+        at: { type: string, format: date-time }
+    Switch:
+      type: object
+      required: [repository]
+      properties:
+        repository: { type: string }
+        reason: { type: string }
+    Switched:
+      type: object
+      required: [repository, stopped]
+      properties:
+        repository: { type: string }
+        stopped: { type: boolean }

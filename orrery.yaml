@@ -1,0 +1,26 @@
+# What this repository builds, for the Orrery of an estate that reads it:
+# the forge reader reads this file with the repository and writes the
+# service, its logo, the APIs it provides, and the APIs it calls. `fields`
+# and `relations` place it in the estate's platform pillars (plat_pillar);
+# an API key is the providing service's key and its id.
+service: github/orchard-suite/graft/cmd/graft
+icon:
+  name: graft
+  file: logo.svg
+fields:
+  category: Build and ship
+relations:
+  pillars:
+  - platform/agents
+  - platform/actions
+provides:
+- id: requests
+  title: Graft requests API
+  kind: rest
+  spec: openapi.yaml
+  description: 'Reports and requests for change: send one for a signed-in person, read where it stands, and read its answer.'
+consumes:
+- github/orchard-suite/annals/cmd/annalsd/events
+- github/orchard-suite/orrery/actions
+- github/orchard-suite/orrery/catalog
+- github/orchard-suite/dispatch/cmd/dispatch/incidents
