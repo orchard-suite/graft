@@ -142,8 +142,9 @@ never restate it.
 ## Delivery
 
 Agents push to main and land with `make land` (`make land BRANCH=<branch>`
-from a worktree): it runs `make check`, then `release-damnit land`. The
-release workflow runs `make check` again on GitHub's hosted runners,
+from a worktree): `release-damnit land` runs the config's check, `make
+check`, on the tree that lands and signs a landing proof the release
+verifies. The release workflow runs `make check` again on GitHub's hosted runners,
 versions every `feat` and `fix` since the last release tag, tags it, and
 builds and signs the image `ghcr.io/orchard-suite/graft` for that tag. A
 pull request runs `make check` too.

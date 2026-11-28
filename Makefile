@@ -37,8 +37,9 @@ lint:
 
 check: lint test
 
-# From a worktree: make land BRANCH=<branch>.
-land: check
+# release-damnit runs the config's check on the tree that lands and signs
+# its proof. From a worktree: make land BRANCH=<branch>.
+land:
 	release-damnit land $(BRANCH)
 
 image:
