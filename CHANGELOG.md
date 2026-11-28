@@ -1,5 +1,13 @@
 # Changelog
 
+## [7.1.1](https://github.com/orchard-suite/graft/compare/v7.1.0...v7.1.1) (2026-11-28)
+
+### Bug Fixes
+
+* **graft:** stop what an agent left running ([91e0d67](https://github.com/orchard-suite/graft/commit/91e0d67b65d69bcd927e8e213c83fe7ec06bb8e3))
+* **graft:** give the screen room for one call ([6d3bdd6](https://github.com/orchard-suite/graft/commit/6d3bdd647d3a7bd9b492025c6ef454c10f30f041))
+* **graft:** run the ion engine that follows parks ([0562f1a](https://github.com/orchard-suite/graft/commit/0562f1a16f1810b80aa2403c06d7ef17c5568828))
+
 ## [7.1.0](https://github.com/orchard-suite/graft/compare/v7.0.0...v7.1.0) (2026-11-28)
 
 ### Features
