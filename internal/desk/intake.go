@@ -104,7 +104,10 @@ func alike(a, b map[string]bool) float64 {
 }
 
 // screenBudget is the most the one screening call may spend, in dollars.
-const screenBudget = 0.05
+// The call carries the runtime's own instructions beside the request, and
+// writing them to the model's cache is most of its cost, so the budget
+// leaves room for that: a budget below it stops every screen.
+const screenBudget = 0.25
 
 func screenPrompt(text string) string {
 	return `Sort the message below, which a person sent from inside an application. Answer with one line of JSON and nothing else: {"sort": "...", "title": "..."}
