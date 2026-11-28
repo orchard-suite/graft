@@ -20,7 +20,7 @@
 # alike, and keeps it across sandboxes so each request starts warm.
 #
 # Every version here is pinned. Bump deliberately.
-ARG ENGINE_IMAGE=ghcr.io/dsswift/ion/engine:3.8.0
+ARG ENGINE_IMAGE=ghcr.io/dsswift/ion/engine:3.8.3
 FROM ${ENGINE_IMAGE} AS engine
 
 FROM golang:1.27-bookworm AS build
