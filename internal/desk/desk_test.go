@@ -290,10 +290,17 @@ type fakeRuntime struct {
 	// usage is what the runtime reports a prompt consumed, given how it
 	// ended; nil reports nothing.
 	usage func(s runtime.Session, err error) runtime.Usage
+	// stop is what ending a session ends, given its key; nil ends nothing.
+	stop func(key string)
 }
 
-func (f *fakeRuntime) Name() string                       { return "ion" }
-func (f *fakeRuntime) Stop(context.Context, string) error { return nil }
+func (f *fakeRuntime) Name() string { return "ion" }
+func (f *fakeRuntime) Stop(_ context.Context, key string) error {
+	if f.stop != nil {
+		f.stop(key)
+	}
+	return nil
+}
 func (f *fakeRuntime) Ask(_ context.Context, s runtime.Session) (string, runtime.Usage, error) {
 	return f.screen, f.used(s, nil), nil
 }
@@ -924,6 +931,45 @@ func TestASmallFixShipsWithNoPlanApproval(t *testing.T) {
 	}
 	if _, err := os.Stat(fx.d.repoDir(r)); !os.IsNotExist(err) {
 		t.Error("the runner's clone outlived the request")
+	}
+}
+
+// TestACommandTheBuilderLeftRunningIsEndedBeforeTheGate pins that a
+// builder's run ends with its session. A command it started in the
+// background and left running, here a check still writing in its clone,
+// is stopped before the gate reads the clone, and the builder is told so.
+func TestACommandTheBuilderLeftRunningIsEndedBeforeTheGate(t *testing.T) {
+	fx := newFixture(t)
+	fx.findings(defect(), fixPlan("a.txt", "tests/two.sh", "tests/still.sh"))
+	files := map[string]string{"a.txt": "one\ntwo\n", "tests/two.sh": "grep -q two a.txt\n",
+		// The repository's check fails while the builder's command still runs.
+		"tests/still.sh": "test ! -e .git/still-running\n"}
+	var running string
+	fx.rt.build = func(dir, prompt string) error {
+		if running == "" {
+			for name, content := range files {
+				write(t, dir, name, content)
+			}
+			run(t, dir, "git", "add", "-A")
+			run(t, dir, "git", "commit", "-q", "-m", "fix: add the second line")
+		}
+		// Every round starts the check again and stops while it runs.
+		if !strings.Contains(prompt, "never stop while a command you started is still running") {
+			t.Error("the builder was not told its session ends when it stops")
+		}
+		running = filepath.Join(dir, ".git", "still-running")
+		write(t, filepath.Dir(running), filepath.Base(running), "")
+		return nil
+	}
+	fx.rt.stop = func(key string) {
+		if strings.HasSuffix(key, "-build") && running != "" {
+			os.Remove(running)
+		}
+	}
+	r := fx.work(fx.submit("developer", "the orders page is blank when I open it"))
+	if r.State != store.StateReleased {
+		log, _ := os.ReadFile(fx.d.LogPath(r.ID))
+		t.Fatalf("state %s, want released: the gate ran beside the builder's command\n%s", r.State, log)
 	}
 }
 

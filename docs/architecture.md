@@ -537,6 +537,13 @@ it consumed (GRF-6004).
   and leaves it out of a screen's answer. Without a report it takes the
   dollars of the stop line (`stopped`); without either the run's spend is
   `unknown`, and counts as nothing.
+- **How a run ends.** A run is over when the engine closes it, not when
+  the agent ends a turn: a run that waits on a command it started in the
+  background is followed until the engine wakes and closes it, and its
+  report counts every turn and token of it. Then `prompt` ends the agent's
+  session, and every command still running in it ends with it, before
+  anything reads what the agent did; every prompt says so. A later prompt
+  with the same key continues the conversation.
 - **What is kept.** One row in `agent_runs` a prompt: its stage (`screen`,
   `investigate`, `revise`, `build`), plan round, the run on the ticket it
   belongs to, that run's attempt, its try within it, whether it is a

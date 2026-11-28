@@ -77,6 +77,8 @@ type Runtime interface {
 	// Ask runs one prompt with no session to keep and returns what the
 	// model wrote, and what the run consumed.
 	Ask(ctx context.Context, s Session) (string, Usage, error)
-	// Stop ends a keyed session. It is safe for a session that is gone.
+	// Stop ends a keyed session and every command still running in it. A
+	// later prompt with the same key continues its conversation. It is safe
+	// for a session that is gone.
 	Stop(ctx context.Context, key string) error
 }

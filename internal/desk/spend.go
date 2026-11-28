@@ -42,12 +42,39 @@ type agentPart struct {
 	windDown bool
 }
 
-// prompt runs one prompt of an agent and keeps what it consumed.
+// prompt runs one prompt of an agent and keeps what it consumed. The run
+// ends with its session: whatever the agent left running is stopped before
+// Graft reads anything it did, so no command of its own changes its clone
+// under the gate. The agent is told so in the prompt. A later prompt with
+// the same key continues the conversation.
 func (d *Desk) prompt(ctx context.Context, r *store.Request, p agentPart, s runtime.Session, log io.Writer) error {
+	s.Prompt += sessionEnds
 	use, err := d.box(r).RT.Run(ctx, s, log)
+	if stopErr := d.endSession(ctx, r, s.Key); stopErr != nil {
+		fmt.Fprintf(log, "the agent's session did not end: %v\n", stopErr)
+		if err == nil {
+			err = fmt.Errorf("the agent's session did not end, so what it left running may still be: %w", stopErr)
+		}
+	}
 	d.spent(ctx, r, p, s, use, err, log)
 	return err
 }
+
+// endSession stops an agent's keyed session and what it left running.
+func (d *Desk) endSession(ctx context.Context, r *store.Request, key string) error {
+	if key == "" {
+		return nil
+	}
+	return d.box(r).RT.Stop(context.WithoutCancel(ctx), key)
+}
+
+// sessionEnds is what every agent is told of how its run ends.
+const sessionEnds = `
+
+## When you stop
+
+Your run ends when you stop. Graft then ends your session, and every command still running in it ends with it, before Graft reads anything you did. So never stop while a command you started is still running: wait for it to finish, in the foreground or until it reports back, and read what it says first.
+`
 
 // askModel asks a model one question and keeps what it consumed.
 func (d *Desk) askModel(ctx context.Context, r *store.Request, p agentPart, s runtime.Session, log io.Writer) (string, error) {
