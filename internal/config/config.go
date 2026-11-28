@@ -67,6 +67,11 @@ type Config struct {
 	GitHubAppKeyFile string
 	ForgeTokenFile   string
 
+	// SigningKeyFile is the SSH private key the runner signs landing proofs
+	// with, a mounted file. Empty, a repository whose release config names
+	// a check does not land.
+	SigningKeyFile string
+
 	ScreenModel        string
 	InvestigateModel   string
 	BuildModel         string
@@ -127,6 +132,7 @@ func FromEnv() (Config, error) {
 		GitHubAppID:      os.Getenv("GRAFT_GITHUB_APP_ID"),
 		GitHubAppKeyFile: os.Getenv("GRAFT_GITHUB_APP_KEY_FILE"),
 		ForgeTokenFile:   os.Getenv("GRAFT_FORGE_TOKEN_FILE"),
+		SigningKeyFile:   os.Getenv("GRAFT_SIGNING_KEY_FILE"),
 		ScreenModel:      env("GRAFT_SCREEN_MODEL", "claude-haiku-5-5"),
 		InvestigateModel: env("GRAFT_INVESTIGATE_MODEL", "claude-sonnet-5-5"),
 		BuildModel:       env("GRAFT_BUILD_MODEL", "claude-sonnet-5-5"),

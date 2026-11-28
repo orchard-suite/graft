@@ -46,17 +46,8 @@ func (d *Desk) land(ctx context.Context, r *store.Request, log io.Writer) error 
 	if err := d.ensureRepo(ctx, r, log); err != nil {
 		return err
 	}
-	dir := d.repoDir(r)
-	if _, err := d.git(ctx, dir, log, "merge-base", "--is-ancestor", "refs/remotes/origin/main", "HEAD"); err != nil {
-		if _, err := shell.Run(ctx, log, shell.Cmd{Dir: dir, Env: d.committer(), Args: append(append([]string{"git"}, d.gitFlags()...), "rebase", "--quiet", "refs/remotes/origin/main")}); err != nil {
-			if _, abortErr := d.git(ctx, dir, log, "rebase", "--abort"); abortErr != nil {
-				return fmt.Errorf("rebase failed and could not be aborted: %v", abortErr)
-			}
-			if r.Reverting {
-				return fmt.Errorf("the revert conflicts with main: %w", err)
-			}
-			return &backToAgent{why: "the commits conflict with main", prompt: conflictBrief(err.Error())}
-		}
+	if err := d.onMain(ctx, r, log); err != nil {
+		return err
 	}
 	if r.First == "" {
 		first, err := d.rev(ctx, r, log, "refs/remotes/origin/main")
@@ -76,14 +67,13 @@ func (d *Desk) land(ctx context.Context, r *store.Request, log io.Writer) error 
 	if err != nil {
 		return err
 	}
-	args := []string{"git", "push", "origin", "HEAD:main"}
-	if landsWithReleaseDamnit(dir) {
-		args = []string{"release-damnit", "land"}
+	if landsWithReleaseDamnit(d.repoDir(r)) {
+		err = d.landProven(ctx, r, log)
+	} else {
+		d.step(r, store.StepDid, "Landing on main with `git push origin HEAD:main`.", nil)
+		_, err = d.git(ctx, d.repoDir(r), log, "push", "origin", "HEAD:main")
 	}
-	d.step(r, store.StepDid, "Landing on main with `"+strings.Join(args, " ")+"`.", nil)
-	// Landing rebases again when main moves meanwhile, and a rebase writes
-	// commits: they carry Graft as their committer.
-	if _, err := shell.Run(ctx, log, shell.Cmd{Dir: dir, Env: d.committer(), Args: args}); err != nil {
+	if err != nil {
 		return err
 	}
 	head, err := d.rev(ctx, r, log, "HEAD")
@@ -92,6 +82,26 @@ func (d *Desk) land(ctx context.Context, r *store.Request, log io.Writer) error 
 	}
 	d.commitSteps(ctx, r, log, before+"..HEAD", true)
 	return d.landed(ctx, r, log, head, "landed on main")
+}
+
+// onMain rebases the runner's clone onto the forge's main as last fetched,
+// when main has moved past it. A conflict goes back to the agent.
+func (d *Desk) onMain(ctx context.Context, r *store.Request, log io.Writer) error {
+	dir := d.repoDir(r)
+	if _, err := d.git(ctx, dir, log, "merge-base", "--is-ancestor", "refs/remotes/origin/main", "HEAD"); err == nil {
+		return nil
+	}
+	// A rebase writes commits: they carry Graft as their committer.
+	if _, err := shell.Run(ctx, log, shell.Cmd{Dir: dir, Env: d.committer(), Args: append(append([]string{"git"}, d.gitFlags()...), "rebase", "--quiet", "refs/remotes/origin/main")}); err != nil {
+		if _, abortErr := d.git(ctx, dir, log, "rebase", "--abort"); abortErr != nil {
+			return fmt.Errorf("rebase failed and could not be aborted: %v", abortErr)
+		}
+		if r.Reverting {
+			return fmt.Errorf("the revert conflicts with main: %w", err)
+		}
+		return &backToAgent{why: "the commits conflict with main", prompt: conflictBrief(err.Error())}
+	}
+	return nil
 }
 
 // landed records the commit main got. A round sent back from the pipeline

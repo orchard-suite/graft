@@ -182,6 +182,9 @@ func serve(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	if cfg.SigningKeyFile == "" {
+		log.Warn("no landing key: a repository whose release config names a check does not land", "reason", "GRAFT_SIGNING_KEY_FILE unset")
+	}
 	incidents := dispatch.New(cfg.DispatchURL, cfg.DispatchToken)
 	if incidents == nil {
 		log.Warn("no incident desk: no incident is checked or opened, and nobody is told", "reason", "GRAFT_DISPATCH_URL or GRAFT_DISPATCH_TOKEN unset")

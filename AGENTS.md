@@ -52,6 +52,11 @@ never restate it.
   the investigator writes (the verdict, the plan, and a reply), as data:
   size-capped strict JSON, checked by code before anything acts on it.
   Commits cross as git bundles.
+- A landing's check runs in a sandbox, on exactly the tree that lands. The
+  runner signs it with `release-damnit attest` and the key in
+  `GRAFT_SIGNING_KEY_FILE`, and lands with `release-damnit land --proven`,
+  which runs no check. Never let the runner run `release-damnit land`
+  without `--proven` (GRF-2007).
 - No key that changes anything is ever in a sandbox. An agent reaches a
   live system only through `graft tool`, which asks the hub's tool door as
   the person who asked. Graft holds no cloud key and never decides

@@ -1,12 +1,13 @@
 # Graft image: the binary, the Ion engine, the Claude Code CLI,
-# release-damnit, and the toolchains the repositories Graft works in build
-# and test with (Go, Node, .NET, Python with uv, Rust). One image serves
-# three containers: `ion serve` (the engine the agents run in), `graft
-# workspace` (where the gate runs), and `graft` (the ports and the
-# workers). The engine and the workspace need the toolchains: an agent
-# builds and tests in one, and the gate re-runs the repository's check in
-# the other. The engine's container also runs `graft tool` and `graft
-# evidence`, the agent's handle, and `graft report`, from the same binary.
+# release-damnit with the ssh-keygen that signs its landing proofs, and the
+# toolchains the repositories Graft works in build and test with (Go, Node,
+# .NET, Python with uv, Rust). One image serves three containers: `ion
+# serve` (the engine the agents run in), `graft workspace` (where the gate
+# runs), and `graft` (the ports and the workers). The engine and the
+# workspace need the toolchains: an agent builds and tests in one, and the
+# gate re-runs the repository's check in the other. The engine's container
+# also runs `graft tool` and `graft evidence`, the agent's handle, and
+# `graft report`, from the same binary.
 # The image holds the system libraries Chromium needs, and no browser: the
 # workspace installs the one a repository's own Playwright wants. The
 # workspace reads the files a person sends with poppler (a PDF's text, and
@@ -37,7 +38,7 @@ ARG DOTNET_SDK_VERSION=10.0.402
 ARG CLAUDE_CODE_VERSION=2.1.301
 ARG RUST_VERSION=1.97.1
 ARG UV_VERSION=0.13.5
-ARG RELEASE_DAMNIT_VERSION=1.6.0
+ARG RELEASE_DAMNIT_VERSION=1.14.0
 # Only for the system libraries Chromium needs: the browser itself is the
 # one each repository's Playwright wants, installed at run time.
 ARG PLAYWRIGHT_VERSION=1.65.1
@@ -47,7 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl git bash make jq unzip xz-utils tini \
       build-essential pkg-config libicu74 \
       python3 python3-venv python3-pip \
-      poppler-utils tesseract-ocr \
+      poppler-utils tesseract-ocr openssh-client \
  && rm -rf /var/lib/apt/lists/*
 
 # Go
@@ -83,7 +84,8 @@ RUN curl -fsSL "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/
     | tar -C /usr/local/bin --strip-components=1 -xz uv-x86_64-unknown-linux-gnu/uv uv-x86_64-unknown-linux-gnu/uvx
 
 # release-damnit: the commit-msg hook, the gate's commit check, and landing,
-# for the repositories that version with it.
+# for the repositories that version with it. Its landing proof is signed
+# with ssh-keygen, from openssh-client above.
 RUN curl -fsSL "https://github.com/dsswift/release-damnit/releases/download/v${RELEASE_DAMNIT_VERSION}/release-damnit-linux-amd64" \
       -o /usr/local/bin/release-damnit \
  && chmod +x /usr/local/bin/release-damnit

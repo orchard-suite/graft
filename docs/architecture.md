@@ -130,13 +130,15 @@ pod. Either way they are the same image.
   `trusted`, the deployment may mount one read-only cloud key there.
 - The workspace container runs `graft workspace` on the pod's loopback.
   Every command that reads an agent's clone runs there: the gate's git and
-  the repository's check, the proof that a new test fails without its fix,
+  the repository's check, the landing's check of the tree that lands, the
+  proof that a new test fails without its fix,
   the install of the browsers the repository's Playwright wants, and the
   git that moves commits in and out. It holds no credential.
 - The runner container runs `graft`: the ports and the workers. It holds
-  the forge credential, the hub's two tokens, and the tokens for the
-  incident desk and Annals. It never runs a command in an agent's
-  clone.
+  the forge credential, the key that signs landing proofs, the hub's two
+  tokens, and the tokens for the incident desk and Annals. It never runs
+  a command in an agent's clone, nor any command the agent's commits
+  hold.
 
 The engine and the workspace share the work volume. The runner cannot see
 it; its database, its logs, and its own clones are on a volume only it
@@ -444,8 +446,22 @@ Landing takes the agent's commits into the runner's clone and rebases them
 onto the forge's main there, so a conflict becomes the agent's next prompt
 instead of a failed request.
 
-- A lane without `review` lands on main: `release-damnit land` where the
-  repository uses it, a plain push otherwise.
+- A lane without `review` lands on main: a plain push, or, where the
+  repository releases with release-damnit, a landing with its proof
+  (`prove.go`). release-damnit's own `land` would run the repository's
+  check in the runner's clone, beside the forge credential and the key,
+  and that check is code the agent wrote. So Graft splits it. It seeds a
+  sandbox (`graft-<request>-land`) with the runner's main, checks that the
+  sandbox holds the same tree, and runs the `check` the release config
+  names there. A check that fails goes back to the builder: main and its
+  commits do not pass together. Passed, the runner signs it with
+  `release-damnit attest`, using `GRAFT_SIGNING_KEY_FILE` as git's SSH
+  signing key in its own clone, and lands with `release-damnit land
+  --proven`, which runs no check and pushes main and the proof together.
+  When main moved, that exits 3; Graft fetches, rebases, and starts over
+  on the new tree, up to five times. With no key, the landing stops before
+  any check and names the setting. A repository whose config names no
+  check lands with `land --proven` and no proof.
 - A lane with `review` pushes the branch `graft/<id>` and opens a pull
   request. Graft first checks that the forge itself keeps a change off
   main until a review; where it does not, the request ends as needing a

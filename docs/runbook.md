@@ -11,8 +11,9 @@ One Graft serves one program; a second program is a second Graft.
 
 ## Release
 
-Land on `main` with `make land`, which runs `make check` and then
-`release-damnit land`. The release workflow runs `make check` again, versions
+Land on `main` with `make land`: `release-damnit land` runs `make check` on
+the tree that lands and signs a landing proof the release verifies first.
+The release workflow runs `make check` again, versions
 every `feat` and `fix` since the last release tag, commits the version, tags
 it, and calls the build workflow, which pushes the image to
 `ghcr.io/orchard-suite/graft`, signs it with cosign keyless, and attests its
@@ -507,6 +508,7 @@ program relies on the sweep.
 | `GRAFT_FORGE_TOKEN_FILE` | | A file holding the forge token: a GitLab project or group access token, or a GitHub token. Read on every use. Set this or the GitHub App, not both |
 | `GRAFT_GITHUB_APP_ID` | | A GitHub App, for a GitHub forge |
 | `GRAFT_GITHUB_APP_KEY_FILE` | | The App's private key (PEM) |
+| `GRAFT_SIGNING_KEY_FILE` | | The SSH private key Graft signs landing proofs with, a mounted file (The landing key, below). Unset, a repository whose release config names a check does not land |
 | `GRAFT_ORRERY_URL` | required | The catalog hub's machine port |
 | `GRAFT_ORRERY_TOKEN` | required | The machine access token |
 | `ORRERY_PUSH_TOKEN` | required | The source token |
@@ -539,7 +541,8 @@ Each sandbox is a pod of its own; only the package caches outlive one
 
 With `GRAFT_SANDBOX=kubernetes`, the estate writes one Pod manifest and
 mounts it at `GRAFT_SANDBOX_POD_FILE`. Graft makes one pod from it for
-each agent session and deletes it after.
+each agent session, and for each landing check (`graft-<request>-land`),
+and deletes it after.
 
 ```yaml
 apiVersion: v1
@@ -638,6 +641,44 @@ Git asks for the credential through `graft git-credential`, so
 release-damnit's pushes get it too. It answers only for the program's forge
 and only for the program's repositories.
 
+## The landing key
+
+A repository that releases with release-damnit and names a `check` in its
+`release-please-config.json` refuses a release whose commit carries no
+landing proof: a statement, signed with an SSH key the estate trusts, that
+the check passed on the tree that landed. Graft runs that check in a
+sandbox, on exactly the tree it lands, signs the result in the runner with
+`release-damnit attest`, and lands with `release-damnit land --proven`,
+which runs no check. When main moves meanwhile, it rebases and checks the
+new tree again. The check never runs beside the forge credential or the
+key.
+
+Give Graft its key once per deployment:
+
+1. Make an SSH key with no passphrase for this Graft alone:
+   `ssh-keygen -t ed25519 -N "" -C graft-landing -f graft-landing`.
+2. Keep the private half in the estate's secret store and mount it,
+   read-only, in the `graft` container only, never in the engine's or the
+   workspace's or a sandbox pod. Set `GRAFT_SIGNING_KEY_FILE` to its path,
+   such as `/etc/graft-landing/key`. The file must not be readable by
+   anyone else when the container's own user owns it (`defaultMode: 0400`
+   on a Kubernetes secret).
+3. Add its public half to the estate's allowed signers, the list each
+   release pipeline's `release-damnit verify` reads, one line:
+
+   ```text
+   <fingerprint> namespaces="release-damnit-landing" <graft-landing.pub's contents>
+   ```
+
+   The fingerprint is what `ssh-keygen -l -E sha256 -f graft-landing`
+   prints second (`SHA256:...`). A landing signed by a key the list does
+   not name lands, and its release then fails at verify.
+
+With no key set, Graft logs `no landing key` at start, and a landing that
+needs a proof stalls with a message naming `GRAFT_SIGNING_KEY_FILE`;
+nothing is pushed. A repository whose config names no check lands without
+a proof, as release-damnit does.
+
 ## What the deployment must add
 
 Graft cannot do these itself.
@@ -653,6 +694,9 @@ Graft cannot do these itself.
   machines may run its cost reader's shipper as a sidecar that shares the
   engine's data volume. Sessions are keyed `graft-<request>-investigate`,
   `graft-<request>-build`, and `graft-<request>-prove`.
+- **The landing key.** For a repository whose release verifies landing
+  proofs: a key in `GRAFT_SIGNING_KEY_FILE`, and its public half in the
+  estate's allowed signers (The landing key, above).
 - **A trusted program's read key.** With `trusted: true`, mount one
   read-only cloud sign-in in the engine's container. Never a key that
   changes anything.
