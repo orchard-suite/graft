@@ -54,7 +54,7 @@ type runView struct {
 	// Before is the failure of the attempt this one retries.
 	Before *store.Failure
 	// Cost shows the run's budget and what its agents spent: the program's
-	// ticket.cost, off unless it says so (ADR-6004).
+	// ticket.cost, off unless it says so (GRF-6004).
 	Cost bool
 }
 

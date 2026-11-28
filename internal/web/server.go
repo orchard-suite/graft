@@ -242,7 +242,7 @@ type Full struct {
 	// not the person who asked.
 	MayRetry bool `json:"mayRetry"`
 	// Spend is what the request's agents spent, for whole readers alone:
-	// never the person who asked (ADR-6004).
+	// never the person who asked (GRF-6004).
 	Spend *store.Spend `json:"spend,omitempty"`
 }
 

@@ -21,7 +21,7 @@ import (
 	"github.com/orchard-suite/graft/internal/store"
 )
 
-// A build lands only when it is finished and proven (ADR-6005). The builder
+// A build lands only when it is finished and proven (GRF-6005). The builder
 // says it is finished, or what is left, in a file Graft names, never in
 // its prose. A run stopped at its budget or its time limit is never
 // finished. A prover, with a budget of its own, proves each criterion of the

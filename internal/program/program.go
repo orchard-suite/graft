@@ -71,7 +71,7 @@ type Ticket struct {
 	Screenshots *bool `yaml:"screenshots"`
 	// Cost puts dollars on the ticket: each run's budget and what its agents
 	// spent. Everyone who reads the ticket reads them, so it is off unless
-	// the program file turns it on (ADR-6004).
+	// the program file turns it on (GRF-6004).
 	Cost bool `yaml:"cost"`
 }
 

@@ -15,7 +15,7 @@ import (
 )
 
 // Every prompt Graft sends an agent runtime is one agent run, and is kept
-// with what the runtime said it consumed (ADR-6004): its spend, model,
+// with what the runtime said it consumed (GRF-6004): its spend, model,
 // tokens, turns, time, and how it ended. A run that failed, timed out, or
 // was stopped at its budget is kept too. Graft never estimates a figure
 // the runtime did not give.

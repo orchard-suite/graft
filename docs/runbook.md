@@ -118,7 +118,7 @@ members.
   fallback lane always waits. A plan that asks for a tool tier waits for
   the approvers in every lane: only an approver grants a tier.
 - **What may skip the wait** is the kind of change, in a lane marked
-  `small_fix` alone (ADR-2004). A clear defect (the screen did not take the
+  `small_fix` alone (GRF-2004). A clear defect (the screen did not take the
   request for something new, the investigator found a defect, and the plan
   only makes the system do what it was meant to) is built first, and ships
   unasked when the fences judge it a small fix. A feature, a fix that
@@ -135,7 +135,7 @@ members.
 
 ### Budgets
 
-Each agent run is held to the budget of its stage (ADR-6002). A run is one
+Each agent run is held to the budget of its stage (GRF-6002). A run is one
 prompt: the investigator's first try, its second try with the reason the
 first did not pass, and each builder round after a gate report are a run
 each, with a budget each. The screen is a fixed few cents.
@@ -145,7 +145,7 @@ each, with a budget each. The screen is a fixed few cents.
 | `limits.budget.investigate` | Two fifths of `spend_usd`: $2.00 | The investigator of a request's first round |
 | `limits.budget.revise` | `investigate`'s, and never less | The investigator of a round that answers the approvers |
 | `limits.budget.build` | Three fifths of `spend_usd`: $3.00 | Each builder run |
-| `limits.budget.prove` | A fifth of `spend_usd`: $1.00 | The prover of a build its builder says is finished, apart from the builder's budget (ADR-6005) |
+| `limits.budget.prove` | A fifth of `spend_usd`: $1.00 | The prover of a build its builder says is finished, apart from the builder's budget (GRF-6005) |
 | `limits.spend_usd` | $5.00 | Only the base the defaults above are shares of |
 
 Graft tells the agent its budget, and holds a fifth of it back. When a
@@ -161,7 +161,7 @@ key above that gives it more room.
 
 ### Runs on the ticket
 
-Each run of a request keeps one comment on its ticket (ADR-6003): the
+Each run of a request keeps one comment on its ticket (GRF-6003): the
 investigation of round 1, each revision, each build, each landing, and each
 release. The comment is written when the run starts, or when the ticket is
 written for a first investigation, and edited as it goes: at most once in
@@ -193,7 +193,7 @@ ticket's description.
   its test or demo data, in the sandbox: the builder before the change, the
   prover after it, with what proves each criterion. A build lands only when
   each criterion is proven and a change people see has a screenshot after
-  it, or an approver waived it (ADR-6005). Graft takes a
+  it, or an approver waived it (GRF-6005). Graft takes a
   picture only when its bytes are a PNG, JPEG, GIF, or WebP, under 5 MB, at
   most 12 a run and 25 MB together, and when OCR in the sandbox finds no
   secret in it; it attaches what passes with its own token, and the comment
@@ -214,7 +214,7 @@ ticket's description.
 
 Every prompt Graft sends an agent (the screen, each investigator try, each
 builder round, the prover, each wind-down) is an agent run, kept with what the agent
-runtime said it spent (ADR-6004): dollars, model, tokens in and out, cache
+runtime said it spent (GRF-6004): dollars, model, tokens in and out, cache
 reads and writes, turns, time, and how it ended. A run that failed, timed
 out, or was stopped at its budget is kept too. The figure is Ion's own, from
 its model catalog's prices; Graft estimates nothing. A run Ion reported
@@ -429,7 +429,7 @@ estate's approvals inbox when the hub writes one.
 ## Comments on the ticket
 
 An approver may answer a plan by commenting on the request's ticket, as
-well as in the hub (ADR-2005). A comment counts while the plan waits for a
+well as in the hub (GRF-2005). A comment counts while the plan waits for a
 decision, and only from someone the plan's approvers let in.
 
 - **Who wrote it.** Graft reads a comment's author as a sign-in address
@@ -451,7 +451,7 @@ decision, and only from someone the plan's approvers let in.
   from the request's approvers, never from the person who asked.
 - **Waive.** A comment that starts `/graft waive`, then a criterion's
   number or `screenshots`, then why, lets an unfinished build land without
-  that proof (ADR-6005). It counts from the request's approvers, never from
+  that proof (GRF-6005). It counts from the request's approvers, never from
   the person who asked, and only while a build waits for its proof.
   Graft says on the ticket what it took; the build goes on at the next
   retry.
@@ -535,7 +535,7 @@ The Ion engine is found through its own variables (`ION_DATA_DIR`,
 ## A pod per session
 
 Each sandbox is a pod of its own; only the package caches outlive one
-(ADR-1001, below).
+(GRF-1001, below).
 
 With `GRAFT_SANDBOX=kubernetes`, the estate writes one Pod manifest and
 mounts it at `GRAFT_SANDBOX_POD_FILE`. Graft makes one pod from it for
@@ -729,7 +729,7 @@ under which nothing runs and nothing loads but the file.
 The page shows each request's state and answer, the files sent with it,
 and, once a plan was asked about, where it is decided and how it was: by
 whom, when, and with what note. Three kinds of reader see a request
-(ADR-2003):
+(GRF-2003):
 
 - **The person who asked** sees their own.
 - **Who runs the repository**, anyone holding a lane above the lowest,
@@ -826,7 +826,7 @@ hours or for the repository to be started; **Details** says which.
 
 ### When a stage fails
 
-Nothing a request held is thrown away (ADR-6001). Every stage runs again
+Nothing a request held is thrown away (GRF-6001). Every stage runs again
 from its start, so a stage that failed can be tried again on the same
 request: no new request, ticket, or approval.
 
@@ -867,7 +867,7 @@ person or by someone in a higher lane.
 ### A build that is not finished
 
 A build lands only when its builder says it is finished and every
-criterion of its plan is proven (ADR-6005). Otherwise the build stalls,
+criterion of its plan is proven (GRF-6005). Otherwise the build stalls,
 and its comment has a **What is left** list.
 
 | What the comment says | Why | What to do |
@@ -893,7 +893,7 @@ and its comment has a **What is left** list.
 
 ### A pipeline that is not green
 
-Only a pipeline that succeeded is a release (ADR-6006). A run that failed,
+Only a pipeline that succeeded is a release (GRF-6006). A run that failed,
 was cancelled or skipped, or waits for a click stalls the request at
 `watching`, and its comment links each such run and each failed job.
 

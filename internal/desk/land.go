@@ -199,7 +199,7 @@ func (d *Desk) pollReview(ctx context.Context, r *store.Request) error {
 // watch waits for every pipeline run the forge starts for the landed
 // commit, then, where the repository's own release job wrote a release
 // commit after it, for every run of that one: its pipeline is the release
-// (ADR-6006). Only success releases anything. A run that failed, was
+// (GRF-6006). Only success releases anything. A run that failed, was
 // cancelled or skipped, or waits for a click stalls the request here, its
 // failed jobs on the ticket; a retry reads the pipeline again and hands
 // what still fails to the builder.

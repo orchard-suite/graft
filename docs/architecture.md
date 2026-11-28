@@ -75,7 +75,7 @@ the forge's hook ─secret─▶└───────────────
   `desk/attachments.go` sweeps them and shows them to the investigator and
   the builder.
 - `internal/web`: the four ports. `reaches` and `readerOf` are the one
-  place the page decides who reads a request (ADR-2003). `hook.go` is the
+  place the page decides who reads a request (GRF-2003). `hook.go` is the
   forge's port.
 - `internal/auth`: who is calling. The page's port reads the front door's
   headers through the platform kit's `door`. The token port matches a
@@ -321,10 +321,10 @@ request, so the sweep and a webhook never both act on one.
   ticket; the round stands and still waits.
 - A comment that is exactly `/graft retry`, from one of the request's
   approvers and not the person who asked, tries again the stage that
-  failed (ADR-6001). It is read on a plan that waits and on a request that
+  failed (GRF-6001). It is read on a plan that waits and on a request that
   waits for a retry, and, through the webhook alone, on one that ended
   failed.
-- The files a counted comment attaches come with it (ADR-2006). The forge
+- The files a counted comment attaches come with it (GRF-2006). The forge
   adapter names a comment's uploads: on GitLab, a link
   `/uploads/<32 hex>/<name>`, relative or under the project's own address,
   and nothing else. Graft reads each through the forge's API by its secret
@@ -339,7 +339,7 @@ request, so the sweep and a webhook never both act on one.
 
 ## Runs on the ticket
 
-A run is one pass of one stage from its start (ADR-6003). `Run` calls
+A run is one pass of one stage from its start (GRF-6003). `Run` calls
 `begin` before each stage and `after` once it returns: a stage of another
 kind, a wait for a person, or an end closes the run well, and `stop` closes
 it failed. The investigating and planning stages are one run, the round's;
@@ -382,9 +382,9 @@ stage held, goes on in its run.
 ## The gate and the fences
 
 Before the builder starts, the workspace installs the browser each
-Playwright version the repository pins wants into the cache (ADR-1001).
+Playwright version the repository pins wants into the cache (GRF-1001).
 The builder is told the repository's commit rules and its check, and says
-in `report/finish.json` that it is finished, or what is left (ADR-6005). A
+in `report/finish.json` that it is finished, or what is left (GRF-6005). A
 round stopped at its budget or its time, or a builder that says what is
 left, ends the build unfinished at once. Otherwise the runner checks,
 through the workspace:
@@ -395,7 +395,7 @@ through the workspace:
 3. Every commit message names the ticket. Graft names it itself first:
    each of the builder's commits whose message lacks `#<number>` is
    written again with the trailer `Refs: #<number>` under its message,
-   keeping its subject, tree, author, and date (ADR-5005). The
+   keeping its subject, tree, author, and date (GRF-5005). The
    repository's commit-msg hook judges each new message; what it refuses
    goes back to the builder, to name the ticket in a form the hook takes.
 4. The commit messages pass `release-damnit check-commits`, where the
@@ -454,7 +454,7 @@ instead of a failed request.
   commit main got. Closed, the request is declined.
 
 Watching waits for every pipeline run the forge starts for the landed
-commit (ADR-6006). Only success is green: failed, cancelled, skipped, and a
+commit (GRF-6006). Only success is green: failed, cancelled, skipped, and a
 GitLab pipeline waiting for a click are not. Once every run is green, in a
 repository that releases with release-damnit, Graft looks on main for
 the first release commit after the landed one (`chore: release`,
@@ -510,7 +510,7 @@ minutes.
 
 Every prompt to the agent runtime is an agent run, and goes through
 `prompt` (or `askModel`, for the screen) in `desk/spend.go`, which keeps what
-it consumed (ADR-6004).
+it consumed (GRF-6004).
 
 - **What the runtime says.** The ion CLI ends an attached prompt with its
   report of the run on its last line, once the engine closed the run:
@@ -537,7 +537,7 @@ it consumed (ADR-6004).
 
 Each agent run is also started with a limit: its stage's budget from the
 program file, `limits.budget.investigate`, `.revise`, `.build`, or `.prove`
-(ADR-6002), and a small fixed sum for the screening call. The prompt tells the agent its budget.
+(GRF-6002), and a small fixed sum for the screening call. The prompt tells the agent its budget.
 
 The runtime stops a run at its limit between turns, keeps the session, and
 says so (`Error: budget exceeded:`), which the Ion adapter

@@ -120,7 +120,7 @@ func (d *Desk) ready(ctx context.Context, r *store.Request, log io.Writer) (bool
 // back by a later stage starts from that stage's report. The builder says
 // when the work is finished; a prover proves each criterion it left
 // unproven. Work that is not finished or not proven is kept on the request
-// and the build stalls (ADR-6005). Then the fences judge the diff: the plan
+// and the build stalls (GRF-6005). Then the fences judge the diff: the plan
 // as a contract, and, for a build that was not asked about, whether it is a
 // small fix.
 func (d *Desk) build(ctx context.Context, r *store.Request, log io.Writer) error {

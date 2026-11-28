@@ -15,7 +15,7 @@ import (
 )
 
 // A request's commits name its ticket, so whoever reads main finds the
-// request, and the revert tells the request's commits apart (ADR-5005).
+// request, and the revert tells the request's commits apart (GRF-5005).
 // Graft names it itself, as a trailer under each message, and never
 // touches a subject: a repository's subject rules stay the builder's to
 // meet, and no model is trusted to remember a reference.

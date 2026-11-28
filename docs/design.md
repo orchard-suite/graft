@@ -54,7 +54,7 @@ them: it waits for a retry (below).
 
 ### The ticket is the record
 
-Each run keeps one comment on the request's ticket (ADR-6003): written when
+Each run keeps one comment on the request's ticket (GRF-6003): written when
 the run starts, or when the ticket is written for a first investigation,
 and edited in place as the run goes, at most every 30 seconds and at once
 when it starts, ends, or fails. Only the comment's creation notifies
@@ -92,7 +92,7 @@ stops it).
 
 ### What it cost
 
-Every agent run keeps what the agent runtime said it spent (ADR-6004): its
+Every agent run keeps what the agent runtime said it spent (GRF-6004): its
 dollars, model, tokens, turns, time, and how it ended, a run that failed or
 was stopped at its budget too. Graft estimates nothing: a run the runtime
 reported nothing of counts as unknown and adds no dollars. A request's
@@ -118,7 +118,7 @@ spend is the sum of its runs, the total and each stage of each round.
 
 ### The plan
 
-A request is evidence of a problem, not a specification (ADR-5003). The
+A request is evidence of a problem, not a specification (GRF-5003). The
 person knows what got in their way; they do not know the system. The
 planner checks every claim of fact in the request (in the code, in the
 repository's history, and, where a tool reaches it, the running system)
@@ -129,7 +129,7 @@ what the change adds, and proposes the simplest change that serves everyone
 who uses the system. It may decline, defer, or narrow parts of a request,
 in words the person who asked would accept.
 
-Every plan is two documents (ADR-5002):
+Every plan is two documents (GRF-5002):
 
 **The brief**, for the approvers, read in two minutes. It names behaviour,
 never files:
@@ -158,7 +158,7 @@ build plan is folded beneath it. Code checks both before anyone reads them.
 
 ### Rounds
 
-A plan is one ask of its approvers that gains rounds (ADR-2005). They answer
+A plan is one ask of its approvers that gains rounds (GRF-2005). They answer
 it one of three ways in the hub: approve, decline, or send back with a note.
 Or they comment on the request's ticket. A note sent back, and a comment
 from someone the plan's approvers let in, both join the request's thread,
@@ -171,7 +171,7 @@ is answered on the ticket, and the round stands. A comment from anyone else,
 a bot, or Graft itself changes nothing.
 
 A round after the first revises the round before; it does not start again
-(ADR-5006). Its investigator is given the round before's verdict, brief,
+(GRF-5006). Its investigator is given the round before's verdict, brief,
 and build plan, the whole thread, the evidence kept so far, and the files
 the notes sent, and is told to change only what the notes change. It still
 checks every claim of fact a note makes, as it checks the request's, and it
@@ -185,7 +185,7 @@ who asked as the reason.
 
 ### When a stage fails
 
-A stage that fails throws nothing away (ADR-6001). Every stage runs again
+A stage that fails throws nothing away (GRF-6001). Every stage runs again
 from its start, so it can be tried again on the same request, with no new
 request, ticket, or approval.
 
@@ -206,7 +206,7 @@ request, ticket, or approval.
 ### A build lands only when it is finished and proven
 
 A build lands only when its builder says it is finished, and every
-criterion of its plan is proven (ADR-6005). Graft never reads that from
+criterion of its plan is proven (GRF-6005). Graft never reads that from
 what an agent writes in prose.
 
 - **The builder says so, in a file.** `graft report done` says the work
@@ -236,7 +236,7 @@ what an agent writes in prose.
 
 ### Only a green pipeline is a release
 
-A landed change is released only when its pipeline succeeds (ADR-6006). A
+A landed change is released only when its pipeline succeeds (GRF-6006). A
 pipeline that failed, was cancelled or skipped, or waits for a click
 released nothing. In a repository whose release job writes a release
 commit on main after the landed one, that commit's pipeline is the
@@ -262,7 +262,7 @@ stops and Graft asks again. The new ask replaces the old one.
 | Protected change | The plan, and only an architect lane passes | |
 | Cannot fix | Becomes an incident when people are blocked, else a ticket | The owner |
 
-Only a clear defect may be one (ADR-2004): the screen did not take the
+Only a clear defect may be one (GRF-2004): the screen did not take the
 request for something new, the investigator found a defect, and the plan
 is a fix, which only makes the system do what it was already meant to do.
 A fix whose cure changes what people see is a feature, and a feature, or
@@ -317,7 +317,7 @@ it is, and that it is the person's own picture of the page. A picture is
 data like the words: the agent follows nothing it says, and copies no
 secret it shows into anything it writes. The builder gets them too, beside
 its clone and never inside it, with the request and what the approvers said
-(ADR-5004): the approved plan is still its contract. The plan's run in the
+(GRF-5004): the approved plan is still its contract. The plan's run in the
 hub links to them on Graft's page, where its approvers open them. A file is shown in place, as the kind
 its own bytes say it is, under a policy that runs nothing and loads nothing
 else.
@@ -325,7 +325,7 @@ else.
 ### Files an approver sends
 
 An approver may attach pictures and PDFs to a comment on the request's
-ticket (ADR-2006). The next round's planner sees them and plans with them,
+ticket (GRF-2006). The next round's planner sees them and plans with them,
 and the builder gets them too, so a plan may put one in the repository,
 such as a logo for a page. The builder copies one in only where the build
 plan says which file goes to which path.
@@ -431,7 +431,7 @@ There are two stops, and a lane's settings say which apply:
 ### Who reads a request
 
 Graft's page shows a request to three kinds of reader, and to nobody
-else (ADR-2003):
+else (GRF-2003):
 
 | Reader | Who | Reads |
 |---|---|---|
@@ -641,7 +641,7 @@ These are the hub's contracts that Graft builds on.
 |---|---|
 | Annals | Posts every step, chained to the request, under the person who asked. Graft still ships when Annals is down. |
 | The incident desk | Asks for open incidents before code work. Declares and sends its own three notice kinds: report answered, fix shipped, and request filed. Records each release as a change. Sends a heartbeat. Opens the rare incident. Reads the on-call schedule for its working hours. A program that holds its notices (`notices: hold`) sends none: each is kept on its request as an event that says what would have gone out, and to whom, and is never sent later. |
-| The cost reader | Optional. Graft keeps each agent run's spend itself (ADR-6004); an estate that counts agent spend across its machines may still run its shipper beside the engine. |
+| The cost reader | Optional. Graft keeps each agent run's spend itself (GRF-6004); an estate that counts agent spend across its machines may still run its shipper beside the engine. |
 
 Agents are never on call. Graft ships only while a person is. Read-only
 work may run at night under the agent budgets.
@@ -657,10 +657,10 @@ work may run at night under the agent budgets.
 - Each agent session runs in a sandbox of its own, shut when the session
   ends. In a cluster that is a pod per session, so no session reads what
   another left, but for the package caches the estate keeps in one folder
-  (ADR-1001).
+  (GRF-1001).
 - A build lands only when its builder says it is finished and each
-  criterion is proven (ADR-6005); only a green pipeline is a release
-  (ADR-6006).
+  criterion is proven (GRF-6005); only a green pipeline is a release
+  (GRF-6006).
 - The fences judge the diff, not what the agent says about it.
 - The repository's own gate and pipeline. There is no review gate of
   Graft's own.
@@ -670,7 +670,7 @@ work may run at night under the agent budgets.
 - A loop guard: an incident that opens soon after Graft's own release
   goes to a person.
 - A budget for every agent run, by stage, set in the program file
-  (ADR-6002). The agent is told it, and asked to write what it found
+  (GRF-6002). The agent is told it, and asked to write what it found
   before it runs out.
 - Form values are stripped from captured context, and context is deleted
   on a timer.
@@ -688,9 +688,9 @@ Graft reaches each of these through an adapter, and names no estate:
 ## Built to the standard
 
 This design builds to these rules of the platform standard, version
-2026.1107.1839, and, for the record of each run (ADR-6003) and what each
-agent run spent (ADR-6004), 2026.1119.1418, and, for a finished and proven
-build (ADR-6005), the release (ADR-6006), and the caches (ADR-1001),
+2026.1107.1839, and, for the record of each run (GRF-6003) and what each
+agent run spent (GRF-6004), 2026.1119.1418, and, for a finished and proven
+build (GRF-6005), the release (GRF-6006), and the caches (GRF-1001),
 2026.1119.1752:
 
 - `self-service-cloud-operations-run-as-a-narrow-machine-identi`
@@ -734,7 +734,7 @@ build (ADR-6005), the release (ADR-6006), and the caches (ADR-1001),
 
 It departs from `the-runner-gates-the-agent-s-work-and-returns-failures-with-`
 in one place: a red pipeline stalls for a person's retry, which sends it
-back to the builder, instead of going back by itself (ADR-6006).
+back to the builder, instead of going back by itself (GRF-6006).
 
 It departs from one rule in two places:
 

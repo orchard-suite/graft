@@ -15,7 +15,7 @@ import (
 	"github.com/orchard-suite/graft/internal/store"
 )
 
-// A stage that fails throws nothing away (ADR-6001). Every stage runs again
+// A stage that fails throws nothing away (GRF-6001). Every stage runs again
 // from its start, so a failed one can be tried again:
 //
 //   - A round that answers the approvers, while the round before still waits

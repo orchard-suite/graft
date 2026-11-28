@@ -81,7 +81,7 @@ func (d *Desk) refresh(ctx context.Context, r *store.Request) {
 }
 
 // budget is what one run of an agent may spend at a stage, and the key in
-// the program file that sets it (ADR-6002): the first round's investigator,
+// the program file that sets it (GRF-6002): the first round's investigator,
 // a round that answers the approvers, or the builder.
 func (d *Desk) budget(stage string, revising bool) (float64, string) {
 	b := d.prog.Limits.Budget
