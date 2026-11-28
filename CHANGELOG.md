@@ -1,5 +1,11 @@
 # Changelog
 
+## [7.1.0](https://github.com/orchard-suite/graft/compare/v7.0.0...v7.1.0) (2026-11-28)
+
+### Features
+
+* **graft:** sign landing proofs in the runner ([911ea5b](https://github.com/orchard-suite/graft/commit/911ea5b12e12b4adaa83c334c5a791659e179f30))
+
 ## [7.0.0](https://github.com/orchard-suite/graft/compare/v6.6.1...v7.0.0) (2026-11-23)
 
 ### ⚠ BREAKING CHANGES
